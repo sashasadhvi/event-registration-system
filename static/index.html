@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EventLock – Workshop Registration</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="wrap bar">
+    <div class="brand"><span class="logo">🔒</span> EventLock <small>Workshop Registration</small></div>
+    <nav>
+      <a href="#events">Events</a>
+      <a href="#mine">My registrations</a>
+      <a href="#lab">Race Lab</a>
+      <a href="#how">How it works</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <h1>Grab your place — <em>even when only one is left.</em></h1>
+    <p>Every registration passes through a <strong>mutex-protected critical section</strong>, so two people can never take the same last seat.</p>
+  </section>
+
+  <section id="events">
+    <div class="sec-head">
+      <h2>Upcoming events</h2>
+      <button class="btn ghost" id="btn-new-event">+ New event</button>
+    </div>
+    <div id="event-grid" class="grid"></div>
+  </section>
+
+  <section id="mine">
+    <h2>My registrations</h2>
+    <form id="lookup-form" class="inline">
+      <input type="email" id="lookup-email" placeholder="Enter your email" required>
+      <button class="btn">Find</button>
+    </form>
+    <div id="my-list"></div>
+  </section>
+
+  <section id="lab">
+    <h2>Race Lab <span class="tag">demo</span></h2>
+    <p class="muted">Fire many simultaneous registrations at one event. Run it <b>without</b> the mutex to see overbooking, then <b>with</b> the mutex to see it fixed.</p>
+    <div class="lab-controls">
+      <label>Event <select id="lab-event"></select></label>
+      <label>Simultaneous users <input type="number" id="lab-users" value="10" min="2" max="60"></label>
+      <label class="check"><input type="checkbox" id="lab-same"> Same user clicks many times (duplicate test)</label>
+      <div class="seg" id="lab-mode">
+        <button data-safe="false" class="danger">Run WITHOUT mutex</button>
+        <button data-safe="true" class="ok">Run WITH mutex</button>
+      </div>
+      <button class="btn ghost" id="lab-clear">Clear simulated registrations</button>
+    </div>
+    <div id="lab-result"></div>
+    <div class="cols">
+      <div><h3>Lock activity log</h3><div id="lab-log" class="log"></div></div>
+      <div><h3>Per-user outcome</h3><div id="lab-users-out" class="chips"></div></div>
+    </div>
+  </section>
+
+  <section id="how">
+    <h2>How the mutex is applied</h2>
+    <div class="cols">
+      <div class="card">
+<pre><code>lock = threading.Lock()
+
+def register(event, user):
+    lock.acquire()            # ENTRY section
+    try:
+        # ---- CRITICAL SECTION ----
+        if seats_taken(event) &gt;= capacity: return FULL
+        if already_registered(user):       return DUPLICATE
+        save_registration(event, user)
+        # --------------------------
+    finally:
+        lock.release()        # EXIT section</code></pre>
+      </div>
+      <div class="card">
+        <ul class="steps">
+          <li><b>Shared data:</b> remaining capacity of each event.</li>
+          <li><b>Race condition:</b> two users both read “1 seat left”, both write → overbooked.</li>
+          <li><b>Critical section:</b> check capacity → check duplicate → insert.</li>
+          <li><b>Mutex:</b> only one request inside at a time; others wait, then see the updated count.</li>
+          <li><b>Cancellation</b> also takes the lock because it changes capacity.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</main>
+
+<dialog id="dlg-register">
+  <form method="dialog" id="reg-form">
+    <h3 id="reg-title">Register</h3>
+    <label>Full name <input id="reg-name" required></label>
+    <label>Email <input type="email" id="reg-email" required></label>
+    <p id="reg-msg" class="msg"></p>
+    <div class="row"><button type="button" class="btn ghost" data-close>Close</button><button class="btn" id="reg-submit">Confirm registration</button></div>
+  </form>
+</dialog>
+
+<dialog id="dlg-event">
+  <form method="dialog" id="event-form">
+    <h3>Create event</h3>
+    <label>Title <input id="ev-title" required></label>
+    <label>Venue <input id="ev-venue" required></label>
+    <label>Date &amp; time <input type="datetime-local" id="ev-date" required></label>
+    <label>Capacity <input type="number" id="ev-cap" min="1" max="10000" value="10" required></label>
+    <p id="ev-msg" class="msg"></p>
+    <div class="row"><button type="button" class="btn ghost" data-close>Close</button><button class="btn">Create</button></div>
+  </form>
+</dialog>
+
+<dialog id="dlg-attendees">
+  <h3 id="att-title">Attendees</h3>
+  <div id="att-list"></div>
+  <div class="row"><button type="button" class="btn ghost" data-close>Close</button></div>
+</dialog>
+
+<footer class="wrap">Product 8 · Event / Workshop Registration System · OS &amp; CN · Mutex / Critical Section (Python <code>threading.Lock</code>)</footer>
+<script src="app.js"></script>
+</body>
+</html>
